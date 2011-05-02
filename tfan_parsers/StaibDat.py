@@ -424,12 +424,11 @@ class StaibDat(dict):
     return numpy.array(smooth_data)
   
 
-  def gaussian_fit(self, key, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fit_size = 0):
+  def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
     """
-    This method returns an n-peak Gaussian fit in the form of a numpy array. 
+    Returns a numpy array of an n-peak Gaussian fit. 
 
     The inputs and their defaults are:
-       key: A string indicating which of the object's data should be analyzed (count data).
        loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
        hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
        order: A positive integer telling how many peaks should compose the fit. Default value is 1.
@@ -440,25 +439,24 @@ class StaibDat(dict):
     """
     pass
 
-  def gaussian_stats(self, key, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1,  model = "linear", fit_size = 0):
+  def gaussian_stats(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1,  model = "linear", fitSize = 0):
     """
-    This method returns Gaussian-related statistics an n-peak Gaussian fit to the data. 
+    Returns Gaussian-related statistics of an n-peak Gaussian fit to the data. 
 
-    For a specified subset of the data, the outputs of this method are the median and standard deviation, sum of the least square errors (SSE), and the coefficient of determination (R^2) of the fitting. If there is more than one peak to be fitted, relative coefficients of each peak will also be returned. 
+    The outputs of this method are the mean and standard deviation, sum of the least square errors (SSE), and the coefficient of determination (R^2) of the fitting. If there is more than one peak to be fitted, relative coefficients of each peak will also be returned. 
 
     The inputs and their defaults are:
-       key: A string indicating which of the object's data should be analyzed (count data).
        loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
        hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
        order: A positive integer telling how many peaks should compose the fit. Default value is 1.
        model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
-       fit_size: A positive integer indicating the desired number of evenly spaced data points in the Gaussian fit used for calculating the statistics. Default: number of elements in self["BE"] between loBE and hiBE.       
+       fitSize: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit used for calculating the statistics. Default: number of elements in self["BE"] between loBE and hiBE.       
 
  
     """
     pass
 
-  def rm_background(self, key, loBE = self["BE"][0], hiBE = self["BE"][-1], size = 0, model = "linear"):
+  def rm_background(self, loBE = self["BE"][0], hiBE = self["BE"][-1], model = "linear"):
     """
     Return a numpy array corresponding to the background electron count.
     
@@ -469,39 +467,98 @@ class StaibDat(dict):
     arguments, the default being the lower bound and upper bound of the
     object's binding energy data, respectively. The returned array has
     elements corresponding to the elements in self["BE"] in the specified
-    energy interval by default. An array with an arbitrary number of elements
-    can be returned by specifying an integer for the "size" argument.
-
+    energy interval by default. 
+    
     Input arguments as well as their units and default values are given as
     follows:
-      key: A string indicating which of the object's data should be analyzed.
       loBE [eV]: Numerical value of the lower bound of the binding energy
       interval to be analyzed. Default: lower bound of the object's binding
       energy.
       hiBE [eV]: Numerical value of the upper bound of the binding energy
       interval to be analyzed. Default: upper bound of the object's binding
       energy.
-      size: Integer specifying the number of elements the returned array
-      should have. Default: number of elements in self["BE"] between loBE and
-      hiBE.
       model: A string indicating the name of background removal algorithm to
       use. Valid inputs are "linear", "shirley", "tougaard", or "blended" for
       blended Shirley type background.
+      
+
+      
     """
+    
+
+    
+    background_values = list()
+    
+    #Index of starting energy 
+    n1 = 0
+    if self["BE"][n1] <= loBE:
+      n1 = n1 + 1
+      
+    #Index of ending energy
+    n2 = numpy.len(self["BE"]) - 1
+    if self["BE"][n2] >= hiBE:
+      n2 = n2 - 1
+    
+    
+    """
+    For materials with a relatively small step in the background over the 
+    energy range covered by the peaks, the background in this case may be 
+    approximated by a linear type background:
+    
+    L(E) = (I1 * (E2 - E) + I1 * (E - E1)) / (E2 - E1)
+    
+    where E1 and E2 are two distinct energies and I1 and I2 are the two 
+    associated intensity values.
+    
+    """
+    if model = "linear":
+      for i in range(n1, n2):
+        BG = (self["C1"][n1] * (self["BE"][n2] - self["BE"][i]) + self["C1"][n2] * (self["BE"][i] - self["BE"][n1])) / (self["BE"][n2] - self["BE"][n1])
+        background_values().append(BG)
+      return numpy.array(background_values)
+    
+    
+    """
+    The Shirley algorthim is an iterative determination of the background.
+    See the original paper at DOI: 10.1103/PhysRevB.5.4709.
+    
+    """
+    if model = "shirley":
+      for i in range(n1, n2):
+        area1[i] = StaibDat.integrate(loBE = self["BE"][0], hiBE = self["BE"][i], model = "shirley", integralmethod = "Simpson")
+        area2[i] = StaibDat.integrate(loBE = self["BE"][i], hiBE = self["BE"][-1], model = "shirley", integralmethod = "Simpson")
+        BG = self["C1"][n2] + (self["C1"][n1] - self["C1"][n2]) * area1[i] / (area1[i] + area2[i])
+        background_values().append(BG)
+      return numpy.array(background_values)
+          
+          
+          
+    #if model = "blended":
+    
+    
+    #if model = "tougaard":
+     # for i in range(n1, n2): 
+        
+    
+    
     pass
 
 
-  def integrate(self, abscissa, ordinate, loEn = self["KE"][0], hiEn = self["KE"][0], model = "linear", integralmethod, args): 
+  def integrate(self, loBE = self["BE"][0], hiBE = self["BE"][0], model = "linear", integralmethod, args): 
     """
-    This method will allow you to calculate the area under a spectrum, along with statistics/parameters from integration. 
+    Returns a float value that represents the area under specified peaks in XPS data. 
 
     The inputs are:
-      abscissa: A string indicating which of the object's data will be the abscissa values (KE, BE).
-      ordinate: A string indicating which of the object's data will be the ordinate values (count data).
-      loEn [eV]: Numerical value of the lower bound of the energy interval (abscissa) to be analyzed. Default: lower bound of the object's energy.
-      hiEn [eV]: Numerical value of the upper bound of the energy interval (abscissa) to be analyzed. Default: upper bound of the object's energy.
-      model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
+      loBE [eV]: Numerical value of the lower bound of the binding energy interval (abscissa) to be analyzed. Default: lower bound of the object's energy.
+      hiBE [eV]: Numerical value of the upper bound of the binding energy interval (abscissa) to be analyzed. Default: upper bound of the object's energy.
+      model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", "blended" or "none".
       integralmethod: A string indicating method of integration (Simpson, etc). 
       args: Other arguments affecting the integration method.
+      
+      
     """
+
+
+    
+    
     pass
