@@ -5,6 +5,7 @@ import re
 import numpy
 import pyparsing
 import pdb
+import scipy
 
 class StaibDat(dict):
   """
@@ -424,39 +425,40 @@ class StaibDat(dict):
     return numpy.array(smooth_data)
   
 
-  def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
-    """
-    Returns a numpy array of an n-peak Gaussian fit. 
+#  def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
+#    """
+#    Returns a numpy array of an n-peak Gaussian fit. 
+#
+#    The inputs and their defaults are:
+#       loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
+#       hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
+#       order: A positive integer telling how many peaks should compose the fit. Default value is 1.
+#       model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
+#       fit_size: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit. Default: number of elements in self["BE"] between loBE and hiBE.       
+#
+# 
+#    """
+#    pass
 
-    The inputs and their defaults are:
-       loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
-       hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
-       order: A positive integer telling how many peaks should compose the fit. Default value is 1.
-       model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
-       fit_size: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit. Default: number of elements in self["BE"] between loBE and hiBE.       
+#   def gaussian_stats(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1,  model = "linear", fitSize = 0):
+#     """
+#     Returns Gaussian-related statistics of an n-peak Gaussian fit to the data. 
+# 
+#     The outputs of this method are the mean and standard deviation, sum of the least square errors (SSE), and the coefficient of determination (R^2) of the fitting. If there is more than one peak to be fitted, relative coefficients of each peak will also be returned. 
+# 
+#     The inputs and their defaults are:
+#        loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
+#        hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
+#        order: A positive integer telling how many peaks should compose the fit. Default value is 1.
+#        model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
+#        fitSize: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit used for calculating the statistics. Default: number of elements in self["BE"] between loBE and hiBE.       
+# 
+#  
+#     """
+#     pass
 
- 
-    """
-    pass
-
-  def gaussian_stats(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1,  model = "linear", fitSize = 0):
-    """
-    Returns Gaussian-related statistics of an n-peak Gaussian fit to the data. 
-
-    The outputs of this method are the mean and standard deviation, sum of the least square errors (SSE), and the coefficient of determination (R^2) of the fitting. If there is more than one peak to be fitted, relative coefficients of each peak will also be returned. 
-
-    The inputs and their defaults are:
-       loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
-       hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
-       order: A positive integer telling how many peaks should compose the fit. Default value is 1.
-       model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
-       fitSize: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit used for calculating the statistics. Default: number of elements in self["BE"] between loBE and hiBE.       
-
- 
-    """
-    pass
-
-  def rm_background(self, loBE = self["BE"][0], hiBE = self["BE"][-1], model = "linear"):
+#  def rm_background(self, loBE = self["BE"][0], hiBE = self["BE"][-1], model = "linear"):
+  def rm_background(self, loBE = 0., hiBE = 1., model = "linear", offset = 0., blend = [], tParam = []):
     """
     Return a numpy array corresponding to the background electron count.
     
@@ -478,14 +480,17 @@ class StaibDat(dict):
       interval to be analyzed. Default: upper bound of the object's binding
       energy.
       model: A string indicating the name of background removal algorithm to
-      use. Valid inputs are "linear", "shirley", "tougaard", or "blended" for
-      blended Shirley type background.
+      use. Valid inputs are "linear", "shirley", "blended" for blended Shirley 
+      type background, or "tougaard".
+      offset [eV]: A float value of desired energy offset for calculation
+      of background. Default: 0. eV. 
+      blend: A float value between 0 and 1 for blending linear and Shirley
+      backgrounds. See notes for blend-type background. Default: [].
+      tParam = A float value for use in the tougaard removal
+      algorithm. Default: [].
       
-
       
     """
-    
-
     
     background_values = list()
     
@@ -498,67 +503,152 @@ class StaibDat(dict):
     n2 = numpy.len(self["BE"]) - 1
     if self["BE"][n2] >= hiBE:
       n2 = n2 - 1
+        
+
+#     For materials with a relatively small step in the background over the 
+#     energy range covered by the peaks, the background in this case may be 
+#     approximated by a linear type background:
+#     
+#     L(E) = (I1 * (E2 - E) + I1 * (E - E1)) / (E2 - E1)
+#     
+#     where E1 and E2 are two distinct energies and I1 and I2 are the two 
+#     associated intensity values.
     
-    
-    """
-    For materials with a relatively small step in the background over the 
-    energy range covered by the peaks, the background in this case may be 
-    approximated by a linear type background:
-    
-    L(E) = (I1 * (E2 - E) + I1 * (E - E1)) / (E2 - E1)
-    
-    where E1 and E2 are two distinct energies and I1 and I2 are the two 
-    associated intensity values.
-    
-    """
-    if model = "linear":
+    if model == "linear":
       for i in range(n1, n2):
         BG = (self["C1"][n1] * (self["BE"][n2] - self["BE"][i]) + self["C1"][n2] * (self["BE"][i] - self["BE"][n1])) / (self["BE"][n2] - self["BE"][n1])
         background_values().append(BG)
       return numpy.array(background_values)
     
     
-    """
-    The Shirley algorthim is an iterative determination of the background.
-    See the original paper at DOI: 10.1103/PhysRevB.5.4709.
-    
-    """
-    if model = "shirley":
+#     The Shirley algorthim is an iterative determination of the background.
+#     The formula for computing the Shirley background is:
+#     
+#     S(E) = I2 + (I1 - I2) * A2(E) / (A1(E) + A2(E))
+#     
+#     where the integrated areas A1(E) and A2(E) represent the area under
+#     the spectrum to the left and right of the energy value E. 
+#
+#     See the original paper at DOI: 10.1103/PhysRevB.5.4709.
+
+    elif model == "shirley":
+      
       for i in range(n1, n2):
-        area1[i] = StaibDat.integrate(loBE = self["BE"][0], hiBE = self["BE"][i], model = "shirley", integralmethod = "Simpson")
-        area2[i] = StaibDat.integrate(loBE = self["BE"][i], hiBE = self["BE"][-1], model = "shirley", integralmethod = "Simpson")
-        BG = self["C1"][n2] + (self["C1"][n1] - self["C1"][n2]) * area1[i] / (area1[i] + area2[i])
+        A1[i] = StaibDat.integrate(loBE = self["BE"][0], hiBE = self["BE"][i], model = "shirley", integralmethod = "simpson")
+        A2[i] = StaibDat.integrate(loBE = self["BE"][i], hiBE = self["BE"][-1], model = "shirley", integralmethod = "simpson")
+        BG = self["C1"][n2] + (self["C1"][n1] - self["C1"][n2]) * A1[i] / (A1[i] + A2[i])
         background_values().append(BG)
       return numpy.array(background_values)
+    
+#     If you find that area intensity ratios of certain peaks are violated
+#     using pure Shirley or linear backgrounds, use a blended type in order
+#     to satisfy whatever ratio is dictated by physics (e.g. degeneracy of
+#     doublet peaks, etc.) to make a "less wrong" background. 
+#     
+#     The blended type background is calculated from a blend of linear and 
+#     an offset Shirley backgrounds:
+#     
+#     OS(E:u,v) = S(E - v) * (1 - u) + u * L(E)
+#     
+#     The parameters u and v represent a linear blend between the Shirley
+#     background (u = 0) and a linear background (u = 1), where the Shirley
+#     curve is offset by an energy of v eV. 
+
           
-          
-          
-    #if model = "blended":
+    elif model == "blended":
+    
+      if offset != 0.:
+        n3 = 0
+    	if self["BE"][n3] <= self["BE"][n1] + offset:
+      	  n3 = n3 + 1      
+      
+      if n3 < n1:
+        for i in range(n3, n2):
+          linBG = (self["C1"][n1] * (self["BE"][n2] - self["BE"][i]) + self["C1"][n2] * (self["BE"][i] - self["BE"][n1])) / (self["BE"][n2] - self["BE"][n1])
+          A1[i] = StaibDat.integrate(loBE = self["BE"][0], hiBE = self["BE"][i], model = "shirley", integralmethod = "simpson")
+          A2[i] = StaibDat.integrate(loBE = self["BE"][i], hiBE = self["BE"][-1], model = "shirley", integralmethod = "simpson")
+          ShrBG = self["C1"][n2] + (self["C1"][n3] - self["C1"][n2]) * A1[i] / (A1[i] + A2[i])
+          BG = blend * linBG + ShrBG * (1 - blend)
+          background_values().append(BG)
+        return numpy.array(background_values)
+      
+      elif n3 >= n1:
+        for i in range(n1, n2):
+          linBG = (self["C1"][n1] * (self["BE"][n2] - self["BE"][i]) + self["C1"][n2] * (self["BE"][i] - self["BE"][n1])) / (self["BE"][n2] - self["BE"][n1])
+          A1[i] = StaibDat.integrate(loBE = self["BE"][0], hiBE = self["BE"][i], model = "shirley", integralmethod = "Simpson")
+          A2[i] = StaibDat.integrate(loBE = self["BE"][i], hiBE = self["BE"][-1], model = "shirley", integralmethod = "Simpson")
+          shrBG = self["C1"][n2] + (self["C1"][n1] - self["C1"][n2]) * A1[i] / (A1[i] + A2[i])
+          BG = blend * linBG + shrBG * (1 - blend)
+          background_values().append(BG)
+        return numpy.array(background_values)
+
+#     The Tougaard background is based on an energy loss cross section F(x) 
+#     representing the probability that an electron at energy offset x undergoes
+#     a loss event and therefore appears as a contibution to the background. 
+#     
+#     See: DOI:10.1016/S0039-6028(98)00852-8
     
     
-    #if model = "tougaard":
-     # for i in range(n1, n2): 
-        
-    
-    
-    pass
+    elif model == "tougaard":
+      for i in range(n1, n2):
+        for j in range(n1, n2):
+          BG =  scipy.integrate.trapz(B * self["C1"][i] * self["C1"][j - i] / (1634 + (self["C1"][j - i])^2)^2)
+          background_values().append(BG) 
+
+    else: 
+      return "Invalid input for background model" 
 
 
-  def integrate(self, loBE = self["BE"][0], hiBE = self["BE"][0], model = "linear", integralmethod, args): 
+  def integrate(self, loBE = 0., hiBE = 1., model = "linear", integralmethod = "simpson", args = "none"): 
     """
     Returns a float value that represents the area under specified peaks in XPS data. 
 
     The inputs are:
-      loBE [eV]: Numerical value of the lower bound of the binding energy interval (abscissa) to be analyzed. Default: lower bound of the object's energy.
-      hiBE [eV]: Numerical value of the upper bound of the binding energy interval (abscissa) to be analyzed. Default: upper bound of the object's energy.
-      model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", "blended" or "none".
-      integralmethod: A string indicating method of integration (Simpson, etc). 
-      args: Other arguments affecting the integration method.
+      loBE [eV]: Numerical value of the lower bound of the binding energy interval (abscissa) to be analyzed. Default: 0. eV. 
+      hiBE [eV]: Numerical value of the upper bound of the binding energy interval (abscissa) to be analyzed. Default: 1. eV. 
+      model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", "blended" or "none". Default: "linear". 
+      integralmethod: A string indicating method of integration. Valid inputs are "simpson" and "trapezoid". Default: "simpson".  
+      args: Other arguments affecting the integration method. Default: "none". 
       
       
-    """
-
-
+    """    
+#     First, we need to determine the indices of the upper and lower bounds of the energy interval of interest.    
     
+    #Index of starting energy 
+    n1 = 0
+    if self["BE"][n1] <= loBE:
+      n1 = n1 + 1
+      
+    #Index of ending energy
+    n2 = numpy.len(self["BE"]) - 1
+    if self["BE"][n2] >= hiBE:
+      n2 = n2 - 1
+
+#     Second, we need to produce a numpy array that represents the XPS background.
+
+    if model == "none":
+      pass
     
-    pass
+    elif model == "linear":
+      for i in range(n1, n2):
+        StaibDat.rm_background(self["C1"], loBE = self["BE"][n1], hiBE = self["BE"][n2])
+    
+    elif model == "shirley":
+      for i in range(n1, n2):
+        StaibDat.rm_background(self["C1"], loBE = self["BE"][n1], hiBE = self["BE"][n2], model = "shirley")
+    
+    elif model == "blended":
+      for i in range(n1, n2):
+        StaibDat.rm_background(self["C1"], loBE = self["BE"][n1], hiBE = self["BE"][n2], model = "blended")
+    
+    elif model == "tougaard":
+      for i in range(n1, n2):
+        StaibDat.rm_background(self["C1"], loBE = self["BE"][n1], hiBE = self["BE"][n2], model = "tougaard")
+
+#     Finally, we integrate using scipy's integration functions to obtain a float value.
+    
+    if integralmethod == "simpson":
+      scipy.integrate.simps(self["C1"][n1:n2] - backgroundvalues(), self["BE"][n1:n2])
+    
+    elif integrelmethod == "trapezoid":
+      scipy.integrate.trapz(self["C1"][n1:n2] - backgroundvalues(), self["BE"][n1:n2])    
