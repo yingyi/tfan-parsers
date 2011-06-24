@@ -425,40 +425,47 @@ class StaibDat(dict):
     return numpy.array(smooth_data)
   
 
-#  def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
-#    """
-#    Returns a numpy array of an n-peak Gaussian fit. 
-#
-#    The inputs and their defaults are:
-#       loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
-#       hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
-#       order: A positive integer telling how many peaks should compose the fit. Default value is 1.
-#       model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
-#       fit_size: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit. Default: number of elements in self["BE"] between loBE and hiBE.       
-#
-# 
-#    """
-#    pass
+ def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
+   """
+   Returns a numpy array of an n-peak Gaussian fit. 
 
-#   def gaussian_stats(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1,  model = "linear", fitSize = 0):
-#     """
-#     Returns Gaussian-related statistics of an n-peak Gaussian fit to the data. 
-# 
-#     The outputs of this method are the mean and standard deviation, sum of the least square errors (SSE), and the coefficient of determination (R^2) of the fitting. If there is more than one peak to be fitted, relative coefficients of each peak will also be returned. 
-# 
-#     The inputs and their defaults are:
-#        loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
-#        hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
-#        order: A positive integer telling how many peaks should compose the fit. Default value is 1.
-#        model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
-#        fitSize: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit used for calculating the statistics. Default: number of elements in self["BE"] between loBE and hiBE.       
-# 
-#  
-#     """
-#     pass
+   The inputs and their defaults are:
+      loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
+      hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
+      order: A positive integer telling how many peaks should compose the fit. Default value is 1.
+      model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
+      fitSize: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit. Default: number of elements in self["BE"] between loBE and hiBE.       
+
+
+   """
+
+
+
+
+   pass
+
+  def gaussian_stats(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1,  model = "linear", fitSize = 0):
+    """
+    Returns Gaussian-related statistics of an n-peak Gaussian fit to the data. 
+
+    The outputs of this method are the mean and standard deviation, sum of the least square errors (SSE), and the coefficient of determination (R^2) of the fitting. If there is more than one peak to be fitted, relative coefficients of each peak will also be returned. 
+
+    The inputs and their defaults are:
+       loBE [eV]: Numerical value of the lower bound of the binding energy interval to be analyzed. Default: lower bound of the object's binding energy.
+       hiBE [eV]: Numerical value of the upper bound of the binding energy interval to be analyzed. Default: upper bound of the object's binding energy.
+       order: A positive integer telling how many peaks should compose the fit. Default value is 1.
+       model: A string indicating the background type to be removed. Valid inputs are "linear", "shirley", "tougaard", or "blended" for blended Shirley type background.
+       fitSize: A positive integer indicating the desired number of evenly spaced data points in the returned Gaussian fit used for calculating the statistics. Default: number of elements in self["BE"] between loBE and hiBE.       
+
+ 
+    """
+
+
+
+    pass
 
 #  def rm_background(self, loBE = self["BE"][0], hiBE = self["BE"][-1], model = "linear"):
-  def rm_background(self, loBE = 0., hiBE = 1., model = "linear", offset = 0., blend = [], tParam = []):
+  def rm_background(self, loBE = 0., hiBE = 1., model = "linear", offset = 0., blend = [], tParam = []):	
     """
     Return a numpy array corresponding to the background electron count.
     
@@ -486,24 +493,25 @@ class StaibDat(dict):
       of background. Default: 0. eV. 
       blend: A float value between 0 and 1 for blending linear and Shirley
       backgrounds. See notes for blend-type background. Default: [].
-      tParam = A float value for use in the tougaard removal
-      algorithm. Default: [].
-      
+      tParam = A float value for use in the tougaard removal algorithm. 
+      Default: [].
       
     """
     
     background_values = list()
     
-    #Index of starting energy 
+#Index of starting energy 
     n1 = 0
-    if self["BE"][n1] <= loBE:
+    while self["BE"][n1] <= loBE:
       n1 = n1 + 1
       
-    #Index of ending energy
+#Index of ending energy
     n2 = numpy.len(self["BE"]) - 1
-    if self["BE"][n2] >= hiBE:
+    while self["BE"][n2] >= hiBE:
       n2 = n2 - 1
-        
+
+#    energyInterval = (self["BE"] > loBE) & (self["BE"] < hiBE) 
+             
 
 #     For materials with a relatively small step in the background over the 
 #     energy range covered by the peaks, the background in this case may be 
@@ -559,7 +567,7 @@ class StaibDat(dict):
     
       if offset != 0.:
         n3 = 0
-    	if self["BE"][n3] <= self["BE"][n1] + offset:
+    	while self["BE"][n3] <= self["BE"][n1] + offset:
       	  n3 = n3 + 1      
       
       if n3 < n1:
@@ -587,8 +595,7 @@ class StaibDat(dict):
 #     a loss event and therefore appears as a contibution to the background. 
 #     
 #     See: DOI:10.1016/S0039-6028(98)00852-8
-    
-    
+    	
     elif model == "tougaard":
       for i in range(n1, n2):
         for j in range(n1, n2):
@@ -596,7 +603,7 @@ class StaibDat(dict):
           background_values().append(BG) 
 
     else: 
-      return "Invalid input for background model" 
+      raise InputError 
 
 
   def integrate(self, loBE = 0., hiBE = 1., model = "linear", integralmethod = "simpson", args = "none"): 
@@ -616,12 +623,12 @@ class StaibDat(dict):
     
     #Index of starting energy 
     n1 = 0
-    if self["BE"][n1] <= loBE:
+    while self["BE"][n1] <= loBE:
       n1 = n1 + 1
       
     #Index of ending energy
     n2 = numpy.len(self["BE"]) - 1
-    if self["BE"][n2] >= hiBE:
+    while self["BE"][n2] >= hiBE:
       n2 = n2 - 1
 
 #     Second, we need to produce a numpy array that represents the XPS background.
