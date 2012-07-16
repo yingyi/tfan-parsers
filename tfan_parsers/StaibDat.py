@@ -425,7 +425,7 @@ class StaibDat(dict):
     return numpy.array(smooth_data)
   
 
- def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
+  def gaussian_fit(self, loBE = self["BE"][0], hiBE = self["BE"][-1], order = 1, model = "linear", fitSize = 0):
    """
    Returns a numpy array of an n-peak Gaussian fit. 
 
